@@ -1,0 +1,10 @@
+{
+    "name": "glib",
+    "version": "0.0.1",
+    "title": "GUI Library",
+    "author": "_CodeGreen",
+    "contact": "Discord: _CodeGreen#0836",
+    "description": "A set of functions designed to make GUIs significantly easier to make.",
+    "factorio_version": "1.1",
+    "dependencies": ["base >= 1.1"]
+}
