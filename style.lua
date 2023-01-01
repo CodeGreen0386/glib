@@ -3,9 +3,9 @@ local button = styles.button
 
 local lib = {}
 
---- Takes a button style name and creates a
----@param name string
-function lib.selected(name)
+--- Creates a selected variant of a button style.
+--- @param name string The parent style to copy for the new style.
+function lib.generate_selected(name)
     local new_name = name.."_selected"
     if styles[new_name] then return end
     styles[new_name] = {

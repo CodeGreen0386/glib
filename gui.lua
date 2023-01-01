@@ -16,11 +16,12 @@ local function error_def(def, s)
     error(s.."\n"..serpent.block(def, {maxlevel = 1, sortkeys = false}))
 end
 
---- @param parent LuaGuiElement
---- @param defs GuiElemDef
---- @param elems? table<string, LuaGuiElement>
---- @return table<string, LuaGuiElement>
---- @return LuaGuiElement
+--- Adds one or more GUI elements to a parent GUI element.
+--- @param parent LuaGuiElement The parent element to add new elements to.
+--- @param defs GuiElemDef The element definition(s) to add to the parent.
+--- @param elems? table<string, LuaGuiElement> The table to add new element references to.
+--- @return table<string, LuaGuiElement> elems The table of element references, indexed by element name.
+--- @return LuaGuiElement elem The topmost element added to a parent (nil if multiple elements were added to the parent)
 local function add(parent, defs, elems)
     elems = elems or {} --[[@as table<string, LuaGuiElement>]]
     local defs_array = to_array(defs)
@@ -128,10 +129,11 @@ if script.mod_name ~= "glib" then
     end
 end
 
---- @param new_handlers table<string, fun(e:GuiEventData)>
---- @param wrapper fun(e:GuiEventData, handler:function)?
-local function add_handlers(new_handlers, wrapper)
-    for name, handler in pairs(new_handlers) do
+--- Adds event handlers for glib to call when an element has a `handlers` table specified.
+--- @param handlers table<string, fun(e:GuiEventData)> The table of handlers for glib to call.
+--- @param wrapper fun(e:GuiEventData, handler:function)? (Optional) The wrapper function to call instead of the event handler directly.
+local function add_handlers(handlers, wrapper)
+    for name, handler in pairs(handlers) do
         if type(handler) == "function" then
             if handler_funcs[name] then
                 error("Attempt to register handler function with duplicate name \""..name.."\".")
@@ -151,8 +153,9 @@ local function add_handlers(new_handlers, wrapper)
     end
 end
 
---- @param elem LuaGuiElement
---- @param tags Tags
+--- Sets the tags of an element.
+--- @param elem LuaGuiElement The element to set the tags of.
+--- @param tags Tags The tags to set.
 local function set_tags(elem, tags)
     local elem_tags = elem.tags
     for k, v in pairs(tags) do
