@@ -1,4 +1,4 @@
-local styles = data.raw["gui-styles"].default
+local styles = data.raw["gui-style"].default
 local button = styles.button
 
 local lib = {}
