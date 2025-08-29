@@ -1,0 +1,20 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.1.3
+Date: 2025-08-29
+  Features:
+    - Added new GLIB_CONFIG global for better control over event handling
+---------------------------------------------------------------------------------------------------
+Version: 0.1.2
+Date: 2025-06-27
+  Bugfixes:
+    - Fixed crash with examples due to last version's method renames
+---------------------------------------------------------------------------------------------------
+Version: 0.1.1
+Date: 2025-06-27
+  Changes:
+    - Renamed glib.add_handlers and glib.add_class to glib.register_handlers and glib.register_class
+---------------------------------------------------------------------------------------------------
+Version: 0.1.0
+Date: 2025-06-24
+  Features:
+    - Initial release
