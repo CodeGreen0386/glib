@@ -35,6 +35,6 @@ function handlers.default_close_button(event)
     event.element.parent.parent.destroy()
 end
 
-glib.add_handlers(handlers)
+glib.register_handlers(handlers)
 
 return default_frame

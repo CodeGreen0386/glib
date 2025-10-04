@@ -131,9 +131,14 @@ local function add(parent, def, refs)
             args.tags = nil
         end
 
+        local _elem = elem
+        if def.class then
+            _elem = setmetatable({elem = elem, add = elem.add, add_tab = elem.add_tab}, classes[def.class])
+        end
+
         if args.name and def.ref ~= false then
             local ref = def.ref or args.name --[[@as string]]
-            refs[ref] = elem
+            refs[ref] = _elem
         end
 
         if def.elem_mods then
@@ -156,15 +161,13 @@ local function add(parent, def, refs)
             elem.drag_target = target
         end
 
-        if def.class then
-            elem = setmetatable({elem = elem}, classes[def.class])
-        end
-
         if children then
             for _, child in ipairs(children) do
                 add(elem, child, refs)
             end
         end
+
+        elem = _elem
 
     elseif def.tab and def.content then
         refs = refs or {}

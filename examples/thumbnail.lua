@@ -25,7 +25,9 @@ local function thumbnail()
             args = {type = "frame", style = "inside_shallow_frame"},
             style_mods = {horizontal_align = "center", vertical_align = "center", width = 120, height = 92},
             children = {{
-                args = {type = "label", name = "code", caption = "{     }"}, -- the book in the thumbnail was edited in post
+                args = {type = "label", name = "code", caption = "{     }"},
+                -- the font prototype was edited to increase the size
+                -- the book in the thumbnail was edited in post
             }}
         }}
     }

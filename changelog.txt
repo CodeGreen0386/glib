@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.4
+Date: 2025-10-04
+  Bugfixes:
+    - Fixed classed elements not being correctly saved in refs
+    - Fixed not being able to add children to classed elements
+---------------------------------------------------------------------------------------------------
 Version: 0.1.3
 Date: 2025-08-29
   Features:
