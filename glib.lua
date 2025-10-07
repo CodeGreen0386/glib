@@ -133,7 +133,7 @@ local function add(parent, def, refs)
 
         local _elem = elem
         if def.class then
-            _elem = setmetatable({elem = elem, add = elem.add, add_tab = elem.add_tab}, classes[def.class])
+            _elem = setmetatable({elem = elem}, classes[def.class])
         end
 
         if args.name and def.ref ~= false then
@@ -158,7 +158,7 @@ local function add(parent, def, refs)
             if not target then
                 error_def(def, "Drag target \""..def.drag_target.."\" does not exist.")
             end
-            elem.drag_target = target
+            elem.drag_target = type(target) == "userdata" and target or target.elem
         end
 
         if children then
@@ -213,7 +213,7 @@ end
 ---@param name string
 ---@param methods table<string, function>
 function glib.register_class(name, methods)
-    local metatable = {__index = methods}
+    local metatable = {__index = function(table, index) return methods[index] or table.elem[index] end}
     classes[name] = metatable
     script.register_metatable(name, metatable)
 end

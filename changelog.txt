@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.5
+Date: 2025-10-07
+  Features:
+    - Made classed elements not require `self.elem.index`, instead just `self.index`
+  Bugfixes:
+    - Fixed drag_target erroring when given a classed element target
+---------------------------------------------------------------------------------------------------
 Version: 0.1.4
 Date: 2025-10-04
   Bugfixes:
