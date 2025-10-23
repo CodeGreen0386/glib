@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.6
+Date: 2025-10-22
+  Features:
+    - Improved error messages
+    - Added error for setting `tags` inside `elem_mods`
+  Bugfixes:
+    - Fixed tab & content not working with classed elements
+---------------------------------------------------------------------------------------------------
 Version: 0.1.5
 Date: 2025-10-07
   Features:
