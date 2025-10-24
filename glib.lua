@@ -96,7 +96,7 @@ local function add(parent, def, refs)
         end
 
         local tags = args.tags
-        assert(not (tags and tags[mod_name]), error_def("Cannot use tag key " .. mod_name .. "as it is reserved for GUI Library."))
+        assert(not (tags and tags[mod_name]), error_def(def, "Cannot use tag key " .. mod_name .. "as it is reserved for GUI Library."))
 
         ---@type table<string, GuiEventHandler>?
         local handlers
