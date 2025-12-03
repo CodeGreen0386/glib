@@ -110,7 +110,7 @@ local function add(parent, def, refs)
             local handler_tags = {}
             for event, handler in pairs(handlers) do
                 local handler_name = handler_names[handler]
-                assert(handler_name, error_def(def, "Unregistered handler:\nPlease register it with glib.add_handlers() in the root scope of your script."))
+                assert(handler_name, error_def(def, "Unregistered handler:\nPlease register it with glib.register_handlers() in the root scope of your script."))
                 handler_tags[event] = handler_name -- maybe tostring event
             end
             args.tags = tags or {}
