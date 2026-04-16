@@ -74,8 +74,8 @@ if config.register_events then
     end
 end
 
-local function error_def(def, s)
-    return s .. "\n" .. serpent.block(def, {maxlevel = 3, sortkeys = false})
+local function error_def(def, message)
+    error(message .. "\n" .. serpent.block(def, {maxlevel = 3, sortkeys = false}))
 end
 
 --- Adds one or more GUI elements to a parent GUI element.
@@ -91,12 +91,16 @@ local function add(parent, def, refs)
         local args = def.args
         local children = def.children
         if def[1] then
-            assert(not children, error_def(def, "Cannot have children in array and key value pair simultaneously."))
+            if children then
+                error_def(def, "Cannot have children in array and key value pair simultaneously.")
+            end
             children = def
         end
 
         local tags = args.tags
-        assert(not (tags and tags[mod_name]), error_def(def, "Cannot use tag key " .. mod_name .. "as it is reserved for GUI Library."))
+        if tags and tags[mod_name] then
+            error_def(def, "Cannot use tag key " .. mod_name .. "as it is reserved for GUI Library.")
+        end
 
         ---@type table<string, GuiEventHandler>?
         local handlers
@@ -110,7 +114,9 @@ local function add(parent, def, refs)
             local handler_tags = {}
             for event, handler in pairs(handlers) do
                 local handler_name = handler_names[handler]
-                assert(handler_name, error_def(def, "Unregistered handler:\nPlease register it with glib.register_handlers() in the root scope of your script."))
+                if not handler_name then
+                    error_def(def, "Unregistered handler:\nPlease register it with glib.register_handlers() in the root scope of your script.")
+                end
                 handler_tags[event] = handler_name -- maybe tostring event
             end
             args.tags = tags or {}
@@ -137,7 +143,9 @@ local function add(parent, def, refs)
 
         if def.elem_mods then
             for k, v in pairs(def.elem_mods) do
-                assert(k ~= "tags", error_def(def, "Cannot set tags inside elem_mods. This would otherwise overwrite handlers."))
+                if k == "tags" then
+                    error_def(def, "Cannot set tags inside elem_mods. This would otherwise overwrite handlers.")
+                end
                 elem[k] = v
             end
         end
@@ -150,7 +158,9 @@ local function add(parent, def, refs)
 
         if def.drag_target then
             local target = refs[def.drag_target]
-            assert(target, error_def(def, "Drag target \"" .. def.drag_target .. "\" not present in refs table."))
+            if not target then
+                error_def(def, "Drag target \"" .. def.drag_target .. "\" not present in refs table.")
+            end
             elem.drag_target = type(target) == "userdata" and target or target.elem
         end
 
@@ -170,7 +180,7 @@ local function add(parent, def, refs)
         if type(content) == "table" then content = content.elem end
         parent.add_tab(tab, content)
     else
-        error(error_def(def, "Invalid GUI element definition:\nMust contain either args or tab and content."))
+        error_def(def, "Invalid GUI element definition:\nMust contain either args or tab and content.")
     end
     return elem, refs
 end
