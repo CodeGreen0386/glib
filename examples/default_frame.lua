@@ -4,7 +4,7 @@ local handlers = {}
 
 ---@param name string
 ---@param caption LocalisedString
----@param events? {frame: GuiEventHandler?, button: GuiEventHandler?}
+---@param events? {frame: fun(event: EventData.on_gui_closed)?, button: fun(event: EventData.on_gui_click)?}
 local function default_frame(name, caption, events)
     return {
         args = {type = "frame", name = name, direction = "vertical"},

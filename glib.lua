@@ -15,6 +15,7 @@ if config.use_event_handler == nil then config.use_event_handler = false end
 local handler_funcs = {}
 ---@type table<function, string>
 local handler_names = {}
+---@type table<string, table>
 local classes = {}
 
 ---@param event GuiEventData
@@ -44,6 +45,7 @@ local gui_events = {
     _confirmed               = defines.events.on_gui_confirmed,
     _elem_changed            = defines.events.on_gui_elem_changed,
     _hover                   = defines.events.on_gui_hover,
+    _inventory_action        = defines.events.on_gui_inventory_action,
     _leave                   = defines.events.on_gui_leave,
     _location_changed        = defines.events.on_gui_location_changed,
     _opened                  = defines.events.on_gui_opened,
@@ -54,7 +56,7 @@ local gui_events = {
     _value_changed           = defines.events.on_gui_value_changed,
 }
 
----@type table<defines.events, GuiEventHandler>
+---@type table<defines.events, fun(event: GuiEventData)>
 local events = {}
 for _, event in pairs(gui_events) do
     events[event] = main_handler
@@ -76,6 +78,25 @@ end
 
 local function error_def(def, message)
     error(message .. "\n" .. serpent.block(def, {maxlevel = 3, sortkeys = false}))
+end
+
+---@param style LuaStyle
+---@param t table<string, StyleMods>
+local function substyles(style, t)
+    for style_name, style_mods in pairs(t) do
+        local substyle = style.get_style(style_name, true)
+        if substyle then
+            for k, v in pairs(style_mods) do
+                if k == "substyle" then
+                    substyles(substyle, v)
+                else
+                    substyle[k] = v
+                end
+            end
+        else
+            error("Style \"" .. style.name .. "\" does not contain sub-style \"" .. style_name .. "\"")
+        end
+    end
 end
 
 --- Adds one or more GUI elements to a parent GUI element.
@@ -102,7 +123,7 @@ local function add(parent, def, refs)
             error_def(def, "Cannot use tag key " .. mod_name .. "as it is reserved for GUI Library.")
         end
 
-        ---@type table<string, GuiEventHandler>?
+        ---@type table<string, fun(event: GuiEventData)>?
         local handlers
         for k, v in pairs(def) do
             if gui_events[k] then
@@ -152,7 +173,11 @@ local function add(parent, def, refs)
 
         if def.style_mods then
             for k, v in pairs(def.style_mods) do
-                elem.style[k] = v
+                if k == "substyle" then
+                    substyles(elem.style --[[@as LuaStyle]], v)
+                else
+                    elem.style[k] = v
+                end
             end
         end
 
@@ -244,22 +269,22 @@ return glib
 ---@field children? GuiElemDef[]
 ---@field tab? GuiElemDef
 ---@field content? GuiElemDef
----@field _checked_state_changed? GuiEventHandler|EventData.on_gui_checked_state_changed
----@field _click? GuiEventHandler|EventData.on_gui_click
----@field _closed? GuiEventHandler|EventData.on_gui_closed
----@field _confirmed? GuiEventHandler|EventData.on_gui_confirmed
----@field _elem_changed? GuiEventHandler|EventData.on_gui_elem_changed
----@field _hover? GuiEventHandler|EventData.on_gui_hover
----@field _leave? GuiEventHandler|EventData.on_gui_leave
----@field _location_changed? GuiEventHandler|EventData.on_gui_location_changed
----@field _opened? GuiEventHandler|EventData.on_gui_opened
----@field _selected_tab_changed? GuiEventHandler|EventData.on_gui_selected_tab_changed
----@field _selection_state_changed? GuiEventHandler|EventData.on_gui_selection_state_changed
----@field _switch_state_changed? GuiEventHandler|EventData.on_gui_switch_state_changed
----@field _text_changed? GuiEventHandler|EventData.on_gui_text_changed
----@field _value_changed? GuiEventHandler|EventData.on_gui_value_changed
+---@field _checked_state_changed? fun(event: EventData.on_gui_checked_state_changed)
+---@field _click? fun(event: EventData.on_gui_click)
+---@field _closed? fun(event: EventData.on_gui_closed)
+---@field _confirmed? fun(event: EventData.on_gui_confirmed)
+---@field _elem_changed? fun(event: EventData.on_gui_elem_changed)
+---@field _hover? fun(event: EventData.on_gui_hover)
+---@field _inventory_action? fun(event: EventData.on_gui_inventory_action)
+---@field _leave? fun(event: EventData.on_gui_leave)
+---@field _location_changed? fun(event: EventData.on_gui_location_changed)
+---@field _opened? fun(event: EventData.on_gui_opened)
+---@field _selected_tab_changed? fun(event: EventData.on_gui_selected_tab_changed)
+---@field _selection_state_changed? fun(event: EventData.on_gui_selection_state_changed)
+---@field _switch_state_changed? fun(event: EventData.on_gui_switch_state_changed)
+---@field _text_changed? fun(event: EventData.on_gui_text_changed)
+---@field _value_changed? fun(event: EventData.on_gui_value_changed)
 
----@alias GuiEventHandler fun(e:GuiEventData)|table<string|defines.events, fun(event:GuiEventData)>
 ---@alias GuiEventData
 ---|EventData.on_gui_checked_state_changed
 ---|EventData.on_gui_click
@@ -289,10 +314,11 @@ return glib
 ---@field hovered_sprite? SpritePath
 ---@field clicked_sprite? SpritePath
 ---@field tooltip? LocalisedString
----@field horizontal_scroll_policy? string
----@field vertical_scroll_policy? string
+---@field elem_tooltip? ElemID
+---@field horizontal_scroll_policy? ScrollPolicy
+---@field vertical_scroll_policy? ScrollPolicy
 ---@field items? LocalisedString[]
----@field selected_index? uint
+---@field selected_index? uint32
 ---@field number? double
 ---@field show_percent_for_small_numbers? boolean
 ---@field location? GuiLocation
@@ -302,9 +328,9 @@ return glib
 ---@field toggled? boolean
 ---@field game_controller_interaction? defines.game_controller_interaction
 ---@field position? MapPosition
----@field surface_index? uint
+---@field surface_index? uint32
 ---@field zoom? double
----@field minimap_player_index? uint
+---@field minimap_player_index? uint32
 ---@field force? string
 ---@field elem_value? string|SignalID|PrototypeWithQuality
 ---@field elem_filters? PrototypeFilter
@@ -325,14 +351,22 @@ return glib
 ---@field allow_negative? boolean
 ---@field is_password? boolean
 ---@field lose_focus_on_confirm? boolean
----@field clear_and_focus_on_right_click? boolean
 ---@field drag_target? LuaGuiElement
----@field selected_tab_index? uint
+---@field selected_tab_index? uint32
 ---@field entity? LuaEntity
 ---@field anchor? GuiAnchor
 ---@field tags? Tags
 ---@field raise_hover_events? boolean
----@field switch_state? string
+---@field inventory? LuaInventory
+---@field slots_per_row? uint8
+---@field empty_slot_info? EmptySlotInfo
+---@field handle_cursor_transfer? boolean
+---@field handle_cursor_split? boolean
+---@field handle_open_item? boolean
+---@field handle_open_mod_item? boolean
+---@field handle_send_stack_to_trash? boolean
+---@field handle_send_stacks_to_trash? boolean
+---@field switch_state? SwitchState
 ---@field allow_none_state? boolean
 ---@field left_label_caption? LocalisedString
 ---@field left_label_tooltip? LocalisedString
@@ -340,28 +374,29 @@ return glib
 ---@field right_label_tooltip? LocalisedString
 
 ---@class StyleMods
----@field minimal_width? int
----@field maximal_width? int
----@field minimal_height? int
----@field maximal_height? int
----@field natural_width? int
----@field natural_height? int
----@field top_padding? int
----@field right_padding? int
----@field bottom_padding? int
----@field left_padding? int
----@field top_margin? int
----@field right_margin? int
----@field bottom_margin? int
----@field left_margin? int
+---@field substyle? table<string, StyleMods>
+---@field minimal_width? int32
+---@field maximal_width? int32
+---@field minimal_height? int32
+---@field maximal_height? int32
+---@field natural_width? int32
+---@field natural_height? int32
+---@field top_padding? int16
+---@field right_padding? int16
+---@field bottom_padding? int16
+---@field left_padding? int16
+---@field top_margin? int16
+---@field right_margin? int16
+---@field bottom_margin? int16
+---@field left_margin? int16
 ---@field horizontal_align? "left"|"center"|"right"?
 ---@field vertical_align? "top"|"center"|"bottom"?
 ---@field font_color? Color
 ---@field font? string
----@field top_cell_padding? int
----@field right_cell_padding? int
----@field bottom_cell_padding? int
----@field left_cell_padding? int
+---@field top_cell_padding? int16
+---@field right_cell_padding? int16
+---@field bottom_cell_padding? int16
+---@field left_cell_padding? int16
 ---@field horizontally_stretchable? boolean
 ---@field vertically_stretchable? boolean
 ---@field horizontally_squashable? boolean
@@ -371,37 +406,37 @@ return glib
 ---@field clicked_font_color? Color
 ---@field disabled_font_color? Color
 ---@field pie_progress_color? Color
----@field clicked_vertical_offset? int
+---@field clicked_vertical_offset? uint32
 ---@field selected_font_color? Color
 ---@field selected_hovered_font_color? Color
 ---@field selected_clicked_font_color? Color
 ---@field strikethrough_color? Color
 ---@field draw_grayscale_picture? boolean
----@field horizontal_spacing? int
----@field vertical_spacing? int
+---@field horizontal_spacing? int32
+---@field vertical_spacing? int32
 ---@field use_header_filler? boolean
----@field bar_width? uint
+---@field bar_width? uint32
 ---@field color? Color
 ---@field single_line? boolean
----@field extra_top_padding_when_activated? int
----@field extra_bottom_padding_when_activated? int
----@field extra_left_padding_when_activated? int
----@field extra_right_padding_when_activated? int
----@field extra_top_margin_when_activated? int
----@field extra_bottom_margin_when_activated? int
----@field extra_left_margin_when_activated? int
----@field extra_right_margin_when_activated? int
----@field extra_padding_when_activated? int|int[]
----@field extra_margin_when_activated? int|int[]
+---@field extra_top_padding_when_activated? int32
+---@field extra_bottom_padding_when_activated? int32
+---@field extra_left_padding_when_activated? int32
+---@field extra_right_padding_when_activated? int32
+---@field extra_top_margin_when_activated? int32
+---@field extra_bottom_margin_when_activated? int32
+---@field extra_left_margin_when_activated? int32
+---@field extra_right_margin_when_activated? int32
+---@field extra_padding_when_activated? int32|int32[]
+---@field extra_margin_when_activated? int32|int32[]
 ---@field stretch_image_to_widget_size? boolean
 ---@field badge_font? string
----@field badge_horizontal_spacing? int
+---@field badge_horizontal_spacing? int32
 ---@field default_badge_font_color? Color
 ---@field selected_badge_font_color? Color
 ---@field disabled_badge_font_color? Color
----@field width? int
----@field height? int
----@field size? int|int[]
----@field padding? int|int[]
----@field margin? int|int[]
----@field cell_padding? int
+---@field width? int32
+---@field height? int32
+---@field size? int32|int32[]
+---@field padding? int16|int16[]
+---@field margin? int16|int16[]
+---@field cell_padding? int16
