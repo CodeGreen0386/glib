@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.2
+Date: 2026-10-02
+  Features:
+    - Added GuiElemDef::callback, called immediately after element and children are created
+    - Added glib.set_tags(element, tags) to add multiple tags at once
+---------------------------------------------------------------------------------------------------
 Version: 0.2.1
 Date: 2026-07-01
   Features:

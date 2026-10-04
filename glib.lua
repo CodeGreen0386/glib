@@ -68,7 +68,7 @@ glib.events = events
 if config.register_events then
     if config.use_event_handler then
         local event_handler = require("event_handler")
-        event_handler.add_lib{events = events}
+        event_handler.add_lib{events = events --[[@as event_handler.events]]}
     else
         for _, id in pairs(gui_events) do
             script.on_event(id, main_handler)
@@ -88,8 +88,10 @@ local function substyles(style, t)
         if substyle then
             for k, v in pairs(style_mods) do
                 if k == "substyle" then
+                    ---@cast v table<string, StyleMods>
                     substyles(substyle, v)
                 else
+                    ---@diagnostic disable-next-line: assign-type-mismatch
                     substyle[k] = v
                 end
             end
@@ -110,13 +112,6 @@ local function add(parent, def, refs)
     local elem
     if def.args then
         local args = def.args
-        local children = def.children
-        if def[1] then
-            if children then
-                error_def(def, "Cannot have children in array and key value pair simultaneously.")
-            end
-            children = def
-        end
 
         local tags = args.tags
         if tags and tags[mod_name] then
@@ -128,7 +123,7 @@ local function add(parent, def, refs)
         for k, v in pairs(def) do
             if gui_events[k] then
                 handlers = handlers or {}
-                handlers[tostring(gui_events[k])] = v
+                handlers[tostring(gui_events[k])] = v --[[@as function]]
             end
         end
         if handlers then
@@ -152,21 +147,11 @@ local function add(parent, def, refs)
             args.tags = nil
         end
 
-        local _elem = elem
-        if def.class then
-            _elem = setmetatable({elem = elem}, classes[def.class])
-        end
-
-        if args.name and def.ref ~= false then
-            local ref = def.ref or args.name --[[@as string]]
-            refs[ref] = _elem
-        end
-
         if def.elem_mods then
+            if def.elem_mods.tags then
+                error_def(def, "Cannot set tags inside elem_mods. This would otherwise overwrite handlers.")
+            end
             for k, v in pairs(def.elem_mods) do
-                if k == "tags" then
-                    error_def(def, "Cannot set tags inside elem_mods. This would otherwise overwrite handlers.")
-                end
                 elem[k] = v
             end
         end
@@ -174,8 +159,10 @@ local function add(parent, def, refs)
         if def.style_mods then
             for k, v in pairs(def.style_mods) do
                 if k == "substyle" then
+                    ---@cast v table<string, StyleMods>
                     substyles(elem.style --[[@as LuaStyle]], v)
                 else
+                    ---@diagnostic disable-next-line: assign-type-mismatch
                     elem.style[k] = v
                 end
             end
@@ -189,30 +176,52 @@ local function add(parent, def, refs)
             elem.drag_target = type(target) == "userdata" and target or target.elem
         end
 
+        local _elem = elem
+        if def.class then
+            _elem = setmetatable({elem = elem}, classes[def.class])
+        end
+
+        if args.name and def.ref ~= false then
+            local ref = def.ref or args.name --[[@as string]]
+            refs[ref] = _elem
+        end
+
+        local children = def.children
+        if def[1] then
+            if children then
+                error_def(def, "Cannot have children in array and key value pair simultaneously.")
+            end
+            children = def --[[@as GuiElemDef[] ]]
+        end
         if children then
             for _, child in ipairs(children) do
                 add(elem, child, refs)
             end
         end
 
-        elem = _elem
+        if def.callback then
+            def.callback(_elem)
+        end
+
+        return _elem, refs
 
     elseif def.tab and def.content then
-        refs = refs or {}
-        local tab = add(parent, def.tab, refs) ---@cast tab LuaGuiElement
-        local content = add(parent, def.content, refs) ---@cast content LuaGuiElement
-        if type(tab) == "table" then tab = tab.elem end
-        if type(content) == "table" then content = content.elem end
-        parent.add_tab(tab, content)
+        local tab = add(parent, def.tab, refs)
+        local content = add(parent, def.content, refs)
+        local _tab = type(tab) == "table" and tab.elem or tab
+        local _content = type(content) == "table" and content.elem or content
+        parent.add_tab(_tab, _content)
+
+        return content, refs
     else
         error_def(def, "Invalid GUI element definition:\nMust contain either args or tab and content.")
     end
-    return elem, refs
+    ---@diagnostic disable-next-line: missing-return
 end
 glib.add = add
 
 ---Adds event handlers for glib to call when an element has one or more handlers specified.
----@param handlers table<string, fun(event: GuiEventData)> The table of handlers for glib to call.
+---@param handlers table<string, function> The table of handlers for glib to call.
 ---@param wrapper? fun(event:GuiEventData, handler:function) (Optional) The wrapper function to call instead of the event handler directly.
 ---@param namespace? string (Optional) The namespace for the handler, so multiple handlers from the same mod can share names and not overwrite each other.
 function glib.register_handlers(handlers, wrapper, namespace)
@@ -257,6 +266,16 @@ function glib.set_tag(element, k, v)
     element.tags = tags
 end
 
+---@param element LuaGuiElement
+---@param new_tags table<string, AnyBasic>
+function glib.set_tags(element, new_tags)
+    local tags = element.tags
+    for k, v in pairs(new_tags) do
+        tags[k] = v
+    end
+    element.tags = tags
+end
+
 return glib
 
 ---@class GuiElemDef
@@ -267,23 +286,24 @@ return glib
 ---@field elem_mods? ElemMods
 ---@field style_mods? StyleMods
 ---@field children? GuiElemDef[]
+---@field callback? fun(element: LuaGuiElement) called immediately after element and children are created
 ---@field tab? GuiElemDef
 ---@field content? GuiElemDef
----@field _checked_state_changed? fun(event: EventData.on_gui_checked_state_changed)
----@field _click? fun(event: EventData.on_gui_click)
----@field _closed? fun(event: EventData.on_gui_closed)
----@field _confirmed? fun(event: EventData.on_gui_confirmed)
----@field _elem_changed? fun(event: EventData.on_gui_elem_changed)
----@field _hover? fun(event: EventData.on_gui_hover)
----@field _inventory_action? fun(event: EventData.on_gui_inventory_action)
----@field _leave? fun(event: EventData.on_gui_leave)
----@field _location_changed? fun(event: EventData.on_gui_location_changed)
----@field _opened? fun(event: EventData.on_gui_opened)
----@field _selected_tab_changed? fun(event: EventData.on_gui_selected_tab_changed)
----@field _selection_state_changed? fun(event: EventData.on_gui_selection_state_changed)
----@field _switch_state_changed? fun(event: EventData.on_gui_switch_state_changed)
----@field _text_changed? fun(event: EventData.on_gui_text_changed)
----@field _value_changed? fun(event: EventData.on_gui_value_changed)
+---@field _checked_state_changed? function
+---@field _click? function
+---@field _closed? function
+---@field _confirmed? function
+---@field _elem_changed? function
+---@field _hover? function
+---@field _inventory_action? function
+---@field _leave? function
+---@field _location_changed? function
+---@field _opened? function
+---@field _selected_tab_changed? function
+---@field _selection_state_changed? function
+---@field _switch_state_changed? function
+---@field _text_changed? function
+---@field _value_changed? function
 
 ---@alias GuiEventData
 ---|EventData.on_gui_checked_state_changed
