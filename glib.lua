@@ -168,14 +168,6 @@ local function add(parent, def, refs)
             end
         end
 
-        if def.drag_target then
-            local target = refs[def.drag_target]
-            if not target then
-                error_def(def, "Drag target \"" .. def.drag_target .. "\" not present in refs table.")
-            end
-            elem.drag_target = type(target) == "userdata" and target or target.elem
-        end
-
         local _elem = elem
         if def.class then
             _elem = setmetatable({elem = elem}, classes[def.class])
@@ -184,6 +176,14 @@ local function add(parent, def, refs)
         if args.name and def.ref ~= false then
             local ref = def.ref or args.name --[[@as string]]
             refs[ref] = _elem
+        end
+
+        if def.drag_target then
+            local target = refs[def.drag_target]
+            if not target then
+                error_def(def, "Drag target \"" .. def.drag_target .. "\" not present in refs table.")
+            end
+            elem.drag_target = type(target) == "userdata" and target or target.elem
         end
 
         local children = def.children
